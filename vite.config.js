@@ -4,4 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: '127.0.0.1', // explicitly use IPv4 localhost
+    port: 3000,        // try a different port
+    strictPort: false  // allow fallback if 3000 is occupied
+  }
 })
