@@ -16,7 +16,7 @@ DROP FUNCTION IF EXISTS public.handle_user_sync() CASCADE;
 
 -- 2. CORE TABLES & MIGRATIONS
 
--- Profiles with Badge System
+-- Profiles with Badge & Referral System
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   status TEXT DEFAULT 'active',
   is_verified BOOLEAN DEFAULT FALSE,
   is_admin BOOLEAN DEFAULT FALSE,
+  referrer_id UUID REFERENCES public.profiles(id),
+  referral_count INTEGER DEFAULT 0,
   last_collect TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -33,7 +35,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Ensure profiles columns exist for existing DBs
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS badge TEXT DEFAULT 'Silver';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bonus_rate FLOAT DEFAULT 0;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referrer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referral_count INTEGER DEFAULT 0;
+
+-- Global Admin Settings
+CREATE TABLE IF NOT EXISTS public.admin_settings (
+  id TEXT PRIMARY KEY DEFAULT 'global',
+  cashout_number TEXT DEFAULT '+8801875354842',
+  referral_bonus FLOAT DEFAULT 720,
+  min_withdraw FLOAT DEFAULT 7200,
+  is_maintenance BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Assets with Scarcity (Stock Management)
 CREATE TABLE IF NOT EXISTS public.assets (
@@ -124,6 +138,7 @@ ALTER TABLE public.newsfeed ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coin_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_investments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_settings ENABLE ROW LEVEL SECURITY;
 
 -- Idempotent Policy Creation
 DROP POLICY IF EXISTS "Public Read Profiles" ON profiles;
@@ -134,6 +149,9 @@ CREATE POLICY "Public Read Assets" ON assets FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public Read News" ON newsfeed;
 CREATE POLICY "Public Read News" ON newsfeed FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Read Settings" ON admin_settings;
+CREATE POLICY "Public Read Settings" ON admin_settings FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Admin Control" ON profiles;
 CREATE POLICY "Admin Control" ON profiles FOR ALL USING (auth.email() = 'mdmarzangazi@gmail.com');
@@ -148,7 +166,7 @@ CREATE POLICY "Users manage own coin requests" ON coin_requests FOR ALL USING (a
 DROP POLICY IF EXISTS "Users manage own withdrawals" ON withdrawals;
 CREATE POLICY "Users manage own withdrawals" ON withdrawals FOR ALL USING (auth.uid() = user_id);
 
--- 4. MASTER FUNCTION: User Setup & Badge Logic
+-- 4. MASTER FUNCTIONS
 CREATE OR REPLACE FUNCTION public.handle_user_sync()
 RETURNS trigger AS $$
 BEGIN
@@ -169,6 +187,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_user_sync();
+
+-- Process Referral Reward
+CREATE OR REPLACE FUNCTION public.apply_referral(new_user_id UUID, referrer_uuid UUID)
+RETURNS void AS $$
+DECLARE
+  bonus_amt FLOAT;
+BEGIN
+  SELECT referral_bonus INTO bonus_amt FROM public.admin_settings WHERE id = 'global';
+  
+  -- Update Referrer
+  UPDATE public.profiles 
+  SET balance = balance + bonus_amt,
+      referral_count = referral_count + 1
+  WHERE id = referrer_uuid;
+
+  -- Link New User
+  UPDATE public.profiles 
+  SET referrer_id = referrer_uuid
+  WHERE id = new_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. BUSINESS LOGIC: Income Collection (Worker Penalty + Investor Linear)
 CREATE OR REPLACE FUNCTION public.collect_earnings_expert(target_user_id UUID)
@@ -203,11 +242,6 @@ BEGIN
       END IF;
     ELSE
       -- INVESTOR LOGIC: Linear yield, no 24h penalty
-      -- yield_per_hour = total_profit / (30 days * 24h)
-      -- inv_rec.amount here is used to find profit_tier from assets if needed, 
-      -- but easier if we store profit_per_hour in investments.
-      -- For now, let's assume we use a field 'monthly_yield' or similar.
-      -- For version 2.0, we'll calculate based on the profit_tier_coins stored in the asset
       DECLARE
         asset_profit FLOAT;
       BEGIN
@@ -235,25 +269,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. RPC HELPERS (FOR ATOMIC OPERATIONS)
+-- 6. RPC HELPERS
 CREATE OR REPLACE FUNCTION public.approve_coin_request(req_id UUID)
 RETURNS void AS $$
 DECLARE
   req_rec RECORD;
 BEGIN
-  -- Get Request details
   SELECT * INTO req_rec FROM public.coin_requests WHERE id = req_id AND status = 'pending' FOR UPDATE;
-  
   IF req_rec IS NOT NULL THEN
-    -- Update User Balance
-    UPDATE public.profiles 
-    SET balance = balance + req_rec.coins_to_add 
-    WHERE id = req_rec.user_id;
-
-    -- Set Status to Approved
-    UPDATE public.coin_requests 
-    SET status = 'approved' 
-    WHERE id = req_id;
+    UPDATE public.profiles SET balance = balance + req_rec.coins_to_add WHERE id = req_rec.user_id;
+    UPDATE public.coin_requests SET status = 'approved' WHERE id = req_id;
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -266,11 +291,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. SEED INITIAL ASSETS
+-- 7. SEED DATA
+INSERT INTO public.admin_settings (id, cashout_number, referral_bonus) 
+VALUES ('global', '+8801875354842', 720)
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.assets (name, type, price, rate, icon, stock_limit) VALUES 
 ('Worker Vector (Basic)', 'worker', 5000, 10, 'Zap', 100),
 ('Worker Vector (Pro)', 'worker', 15000, 45, 'Shield', 50),
-('Investor Vector (Gold)', 'investor', 50000, 0, 'Crown', 20);
+('Investor Vector (Gold)', 'investor', 50000, 0, 'Crown', 20)
+ON CONFLICT DO NOTHING;
 
--- 8. NEWSFEED INITIAL
-INSERT INTO public.newsfeed (message) VALUES ('System Protocol: All assets carry a 24h collection cycle. Late harvests are diverted to reserves.');
+INSERT INTO public.newsfeed (message) VALUES ('System Protocol: All assets carry a 24h collection cycle. Late harvests are diverted to reserves.')
+ON CONFLICT DO NOTHING;
