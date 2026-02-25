@@ -43,13 +43,16 @@ export default function Withdraw({ profile, user, onUpdate }) {
       
       const { error: logError } = await supabase.from('withdrawals').insert([{
         user_id: user.id,
+        email: user.email,
         amount: withdrawAmount,
         method: method,
-        address: address,
+        number: address, // Using address field as the payout number
         status: 'pending'
       }]);
 
-      showToast("Withdrawal request submitted! It will be processed within 24-48 hours.", "success");
+      if (logError) throw logError;
+
+      showToast("Withdrawal request submitted! Admin will pay you within 24 hours.", "success");
       setAmount('');
       setAddress('');
       if (onUpdate) onUpdate();

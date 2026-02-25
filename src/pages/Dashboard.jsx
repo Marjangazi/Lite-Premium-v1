@@ -27,22 +27,20 @@ export default function Dashboard({ user }) {
       let { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       
       if (!data) {
-        // 10,000 coin bonus logic during profile creation
-        // Check for referral
-        const referrerId = new URLSearchParams(window.location.search).get('ref');
-        
+        // Fallback if trigger hasn't finished (rare)
         const { data: newP, error: insertError } = await supabase.from('profiles').insert([
           { 
             id: user.id, 
             email: user.email, 
-            balance: 10000, 
-            last_collect: new Date().toISOString(),
-            referrer_id: referrerId || null 
+            balance: 1000, 
+            worker_level: 'Starter',
+            mining_rate: 0.1
           }
         ]).select().single();
         
-        if (insertError) throw insertError;
-        setProfile(newP);
+        if (insertError && insertError.code !== '23505') throw insertError; // 23505 is duplicate key (trigger might have won)
+        if (newP) setProfile(newP);
+        else fetchProfile(); // Retry to get the trigger-created profile
       } else {
         setProfile(data);
       }

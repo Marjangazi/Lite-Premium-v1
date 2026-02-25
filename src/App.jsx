@@ -4,9 +4,10 @@ import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
 import Shop from './pages/Shop';
 import Withdraw from './pages/Withdraw';
+import Deposit from './pages/Deposit';
 import Auth from './pages/Auth';
 import Admin from './pages/Admin';
-import { LayoutDashboard, ShoppingCart, Banknote, User, LogOut, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Banknote, User, LogOut, ShieldAlert, PlusCircle } from 'lucide-react';
 import { ToastProvider } from './lib/ToastContext';
 
 export default function App() {
@@ -55,6 +56,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard user={session.user} />} />
               <Route path="/shop" element={<Shop profile={profile} user={session.user} onUpdate={fetchProfile} />} />
+              <Route path="/deposit" element={<Deposit profile={profile} user={session.user} onUpdate={fetchProfile} />} />
               <Route path="/withdraw" element={<Withdraw profile={profile} user={session.user} onUpdate={fetchProfile} />} />
               <Route path="/profile" element={<ProfilePage user={session.user} profile={profile} onUpdate={fetchProfile} />} />
               <Route path="/admin" element={<Admin user={session.user} />} />
@@ -72,7 +74,8 @@ function Navbar({ user }) {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Home' },
     { path: '/shop', icon: ShoppingCart, label: 'Shop' },
-    { path: '/withdraw', icon: Banknote, label: 'Withdraw' },
+    { path: '/deposit', icon: PlusCircle, label: 'Add Coin' },
+    { path: '/withdraw', icon: Banknote, label: 'Cashout' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];
 

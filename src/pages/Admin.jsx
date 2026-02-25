@@ -9,6 +9,8 @@ export default function Admin({ user }) {
   const [profiles, setProfiles] = useState([]);
   const [assets, setAssets] = useState([]);
   const [investments, setInvestments] = useState([]);
+  const [depositRequests, setDepositRequests] = useState([]);
+  const [withdrawRequests, setWithdrawRequests] = useState([]);
   
   // Modals state
   const [loading, setLoading] = useState(false);
@@ -18,8 +20,20 @@ export default function Admin({ user }) {
       fetchProfiles();
       fetchAssets();
       fetchInvestments();
+      fetchDepositRequests();
+      fetchWithdrawRequests();
     }
   }, [user]);
+
+  const fetchDepositRequests = async () => {
+    const { data } = await supabase.from('coin_requests').select('*').order('created_at', { ascending: false });
+    if (data) setDepositRequests(data);
+  };
+
+  const fetchWithdrawRequests = async () => {
+    const { data } = await supabase.from('withdrawals').select('*').order('created_at', { ascending: false });
+    if (data) setWithdrawRequests(data);
+  };
 
   const fetchInvestments = async () => {
     const { data } = await supabase.from('user_investments').select('*');
@@ -143,18 +157,30 @@ export default function Admin({ user }) {
         </div>
       </header>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex flex-wrap gap-2 mb-8">
         <button 
           onClick={() => setActiveTab('users')}
-          className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'users' ? 'bg-premium-gold text-black shadow-neon-gold scale-105' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'}`}
+          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'users' ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}
         >
-          <Users size={18} /> Manage Users
+          <Users size={16} /> Users
+        </button>
+        <button 
+          onClick={() => setActiveTab('deposits')}
+          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'deposits' ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}
+        >
+          <Plus size={16} /> Deposits
+        </button>
+        <button 
+          onClick={() => setActiveTab('withdrawals')}
+          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'withdrawals' ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}
+        >
+          <Settings size={16} /> Withdrawals
         </button>
         <button 
           onClick={() => setActiveTab('assets')}
-          className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'assets' ? 'bg-premium-gold text-black shadow-neon-gold scale-105' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'}`}
+          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'assets' ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}
         >
-          <Package size={18} /> Manage Shop Assets
+          <Package size={16} /> Shop
         </button>
       </div>
 
@@ -234,6 +260,88 @@ export default function Admin({ user }) {
         </div>
       )}
 
+
+      {activeTab === 'deposits' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-premium-gold">Deposit Requests</h2>
+          {depositRequests.length === 0 ? <p className="text-zinc-500">No requests.</p> : 
+            depositRequests.map(req => (
+              <div key={req.id} className="premium-card flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{req.email}</p>
+                  <p className="text-lg text-premium-gold font-mono">{req.amount} 🪙</p>
+                  <p className="text-xs text-zinc-500">{req.method} | {req.transaction_id}</p>
+                </div>
+                {req.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        await supabase.rpc('approve_coin_request', { req_id: req.id });
+                        showToast("Request Approved!", "success");
+                        fetchDepositRequests();
+                        fetchProfiles();
+                      }}
+                      className="bg-green-500 text-black px-4 py-2 rounded-lg font-bold text-xs hover:bg-green-400 transition"
+                    >Approve</button>
+                    <button 
+                      onClick={async () => {
+                        await supabase.from('coin_requests').update({ status: 'rejected' }).eq('id', req.id);
+                        showToast("Request Rejected", "info");
+                        fetchDepositRequests();
+                      }}
+                      className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-500/30 transition"
+                    >Reject</button>
+                  </div>
+                ) : (
+                  <span className={`text-xs font-bold uppercase ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>{req.status}</span>
+                )}
+              </div>
+            ))
+          }
+        </div>
+      )}
+
+      {activeTab === 'withdrawals' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-red-400">Withdrawal Requests</h2>
+          {withdrawRequests.length === 0 ? <p className="text-zinc-500">No requests.</p> : 
+            withdrawRequests.map(req => (
+              <div key={req.id} className="premium-card flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{req.email || 'User'}</p>
+                  <p className="text-lg text-red-400 font-mono">-{req.amount} 🪙</p>
+                  <p className="text-xs text-zinc-500">{req.method} | {req.address || req.number}</p>
+                </div>
+                {req.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        await supabase.from('withdrawals').update({ status: 'approved' }).eq('id', req.id);
+                        showToast("Withdrawal Marked as Paid", "success");
+                        fetchWithdrawRequests();
+                      }}
+                      className="bg-green-500 text-black px-4 py-2 rounded-lg font-bold text-xs hover:bg-green-400 transition"
+                    >Paid</button>
+                    <button 
+                      onClick={async () => {
+                        const { data: userData } = await supabase.from('profiles').select('balance').eq('id', req.user_id).single();
+                        await supabase.from('profiles').update({ balance: (userData?.balance || 0) + req.amount }).eq('id', req.user_id);
+                        await supabase.from('withdrawals').update({ status: 'rejected' }).eq('id', req.id);
+                        showToast("Rejected & Refunded", "info");
+                        fetchWithdrawRequests();
+                        fetchProfiles();
+                      }}
+                      className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-500/30 transition"
+                    >Reject/Refund</button>
+                  </div>
+                ) : (
+                  <span className={`text-xs font-bold uppercase ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>{req.status}</span>
+                )}
+              </div>
+            ))
+          }
+        </div>
+      )}
 
       {activeTab === 'assets' && (
         <div className="space-y-6">
