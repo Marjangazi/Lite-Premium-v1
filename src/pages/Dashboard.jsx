@@ -156,7 +156,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
                 </div>
                 <div className="flex items-baseline gap-4">
                    <h2 className="text-6xl font-black font-mono tracking-tighter text-white tabular-nums">
-                     {profile?.balance?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                     {profile?.coins_balance?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                    </h2>
                    <div className="flex flex-col">
                       <span className="text-premium-gold font-black italic text-xs leading-none">C-UNIT</span>
@@ -165,7 +165,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
                 </div>
                 <div className="flex items-center gap-4 mt-2">
                   <p className="text-zinc-600 font-bold text-[10px] uppercase italic tracking-tight">
-                    ≈ ৳ {(profile?.balance / COIN_TO_BDT).toLocaleString()} VALUATION
+                    ≈ ৳ {(profile?.coins_balance / COIN_TO_BDT).toLocaleString()} VALUATION
                   </p>
                   <div className="h-4 w-[1px] bg-zinc-800" />
                   <p className="text-premium-gold font-black text-[10px] uppercase italic tracking-tight flex items-center gap-1">

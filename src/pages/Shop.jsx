@@ -61,9 +61,9 @@ export default function Shop({ profile, user, onUpdate }) {
       }).eq('id', asset.id);
       if (stockError) throw stockError;
 
-      const { error: balError } = await supabase.from('profiles').update({ 
-        balance: profile.balance - asset.price_coins,
-        mining_rate: asset.type === 'worker' ? (profile.mining_rate || 0) + asset.base_rate : profile.mining_rate
+      const { error: balError } = await supabase.from('users').update({ 
+        coins_balance: profile.balance - asset.price_coins,
+        total_hourly_rate: asset.type === 'worker' ? (profile.total_hourly_rate || 0) + asset.base_rate : profile.total_hourly_rate
       }).eq('id', user.id);
       if (balError) throw balError;
       

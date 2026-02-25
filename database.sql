@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.assets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   type TEXT DEFAULT 'worker',
-  price_coins FLOAT DEFAULT 0,
+  price FLOAT DEFAULT 0,
   base_rate FLOAT DEFAULT 0,
   risk_level TEXT DEFAULT 'medium',
   market_sensitivity FLOAT DEFAULT 1.0,
@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS public.assets (
 );
 
 -- Ensure all columns exist for existing DBs (Migration Path)
-ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS price_coins FLOAT DEFAULT 0;
+ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS price FLOAT DEFAULT 0;
+ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS base_rate FLOAT DEFAULT 0;
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS risk_level TEXT DEFAULT 'medium';
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS market_sensitivity FLOAT DEFAULT 1.0;
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS volatility_index FLOAT DEFAULT 0.03;
@@ -93,10 +94,10 @@ CREATE TABLE IF NOT EXISTS public.economy_state (
 CREATE TABLE IF NOT EXISTS public.admin_settings (
   id TEXT PRIMARY KEY DEFAULT 'global',
   cashout_number TEXT DEFAULT '+8801875354842',
-  referral_bonus_coins FLOAT DEFAULT 720,
-  min_withdraw_coins FLOAT DEFAULT 7200,
+  referral_bonus FLOAT DEFAULT 720,
+  min_withdraw FLOAT DEFAULT 7200,
   is_maintenance BOOLEAN DEFAULT FALSE,
-  exchange_rate_coins_per_bdt FLOAT DEFAULT 720,
+  exchange_rate FLOAT DEFAULT 720,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -169,6 +170,28 @@ CREATE TABLE IF NOT EXISTS public.community_links (
   url TEXT NOT NULL,
   is_active BOOLEAN DEFAULT true,
   admin_editable BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User Investments Table (Missing from original schema)
+CREATE TABLE IF NOT EXISTS public.user_investments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  asset_id UUID REFERENCES public.assets(id),
+  asset_name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  amount FLOAT NOT NULL,
+  hourly_return FLOAT DEFAULT 0,
+  expiry_date TIMESTAMP WITH TIME ZONE,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Profiles Table (Missing from original schema - for user balances)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  balance FLOAT DEFAULT 0,
+  mining_rate FLOAT DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -424,7 +447,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DELETE FROM public.assets;
 
 -- Worker Assets (Low Risk, Daily Collection Required)
-INSERT INTO public.assets (name, type, price_coins, base_rate, risk_level, market_sensitivity, lifecycle_days) VALUES 
+INSERT INTO public.assets (name, type, price, base_rate, risk_level, market_sensitivity, lifecycle_days) VALUES 
 ('Rickshaw', 'worker', 7200, 0.50, 'low', 0.8, 365),
 ('Electric Bike', 'worker', 10000, 0.69, 'low', 0.9, 365),
 ('CNG', 'worker', 14200, 0.98, 'medium', 1.0, 365),
@@ -437,7 +460,7 @@ INSERT INTO public.assets (name, type, price_coins, base_rate, risk_level, marke
 ('Tractor', 'worker', 400000, 27.77, 'high', 1.7, 365);
 
 -- Investor Assets (Passive, Risk-Based Returns)
-INSERT INTO public.assets (name, type, price_coins, base_rate, risk_level, market_sensitivity, lifecycle_days) VALUES 
+INSERT INTO public.assets (name, type, price, base_rate, risk_level, market_sensitivity, lifecycle_days) VALUES 
 ('Small Shop', 'investor', 7200, 72, 'low', 0.5, 30),
 ('Mini Mart', 'investor', 14200, 284, 'medium', 0.8, 30),
 ('Pharmacy', 'investor', 7200, 144, 'medium', 0.9, 60),
@@ -450,7 +473,7 @@ VALUES (0, 1.0, 1.0, 0.0)
 ON CONFLICT (id) DO NOTHING;
 
 -- Initial Admin Settings
-INSERT INTO public.admin_settings (cashout_number, referral_bonus_coins, min_withdraw_coins, exchange_rate_coins_per_bdt)
+INSERT INTO public.admin_settings (cashout_number, referral_bonus, min_withdraw, exchange_rate)
 VALUES ('+8801875354842', 720, 7200, 720)
 ON CONFLICT (id) DO NOTHING;
 
@@ -473,3 +496,6 @@ INSERT INTO public.newsfeed (message, type) VALUES
 ('ParTimer Official: Business Simulation Platform Operational. Learn real business skills in a safe environment!', 'flash'),
 ('Remember: This is a simulation platform. No real-world financial guarantees are provided.', 'info')
 ON CONFLICT DO NOTHING;
+
+-- Verify the database setup
+SELECT 'Database setup completed successfully!' as status;

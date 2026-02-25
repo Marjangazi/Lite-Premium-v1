@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { ThemeProvider } from './lib/ThemeContext';
-import { I18nProvider } from './lib/i18n';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import Shop from './pages/Shop';
-import Deposit from './pages/Deposit';
-import Withdraw from './pages/Withdraw';
-import Admin from './pages/Admin';
-import Community from './pages/Community';
-import Toast from './components/Toast';
 import { ToastProvider } from './lib/ToastContext';
 import { deviceFingerprint } from './lib/deviceFingerprint';
 import { collectionEngine } from './lib/collectionEngine';
+import LoadingSpinner from './components/LoadingSpinner';
+import Toast from './components/Toast';
+import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 import './index.css';
+
+// Lazy load pages for better performance
+const Auth = React.lazy(() => import('./pages/Auth'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Shop = React.lazy(() => import('./pages/Shop'));
+const Deposit = React.lazy(() => import('./pages/Deposit'));
+const Withdraw = React.lazy(() => import('./pages/Withdraw'));
+const Admin = React.lazy(() => import('./pages/Admin'));
+const Community = React.lazy(() => import('./pages/Community'));
 
 function App() {
   const [session, setSession] = useState(null);
@@ -79,17 +84,24 @@ function App() {
     <ThemeProvider>
       <ToastProvider>
         <Router>
-          <div className="App">
-            <Routes>
-              <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/dashboard" />} />
-              <Route path="/dashboard" element={session ? <Dashboard session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/shop" element={session ? <Shop session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/deposit" element={session ? <Deposit session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/withdraw" element={session ? <Withdraw session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/community" element={session ? <Community session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/admin" element={session ? <Admin session={session} /> : <Navigate to="/auth" />} />
-              <Route path="/" element={<Navigate to="/dashboard" />} />
-            </Routes>
+          <div className="App min-h-screen bg-gray-900">
+            <Navbar session={session} onSidebarToggle={() => {}} />
+            <Sidebar isOpen={false} onClose={() => {}} session={session} />
+            <main className="lg:ml-64">
+              <div className="min-h-screen">
+                <Routes>
+                  <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/dashboard" />} />
+                  <Route path="/dashboard" element={session ? <Dashboard session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/shop" element={session ? <Shop session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/deposit" element={session ? <Deposit session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/withdraw" element={session ? <Withdraw session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/community" element={session ? <Community session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/admin" element={session ? <Admin session={session} /> : <Navigate to="/auth" />} />
+                  <Route path="/" element={<Navigate to="/dashboard" />} />
+                </Routes>
+              </div>
+              <Footer />
+            </main>
             <Toast />
           </div>
         </Router>
