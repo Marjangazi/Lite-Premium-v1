@@ -34,36 +34,37 @@ export default function Shop({ profile, user, onUpdate }) {
     if (profile.balance < asset.price) return showToast("Not enough coins!", "error");
     
     try {
-      if (asset.type === 'worker') {
-        const { error } = await supabase.from('profiles').update({ 
-          balance: profile.balance - asset.price,
-          mining_rate: asset.rate,
-          worker_level: asset.name
-        }).eq('id', user.id);
-        if (error) throw error;
-      } else if (asset.type === 'vehicle') {
-        // Calculate hourly return based on monthly profit
-        // Example: (1000 * 5%) = 50 coins / month = 50 / 720 hours = 0.069 per hour
-        const profitTotal = asset.price * (asset.profit_percent / 100);
-        const hourly = profitTotal / (30 * 24);
-
-        const { error: invError } = await supabase.from('user_investments').insert([{
-          user_id: user.id,
-          asset_name: asset.name,
-          amount: asset.price,
-          profit_percent: asset.profit_percent,
-          hourly_return: hourly
-        }]);
-        if (invError) throw invError;
-        
-        const { error: balError } = await supabase.from('profiles').update({ 
-          balance: profile.balance - asset.price,
-          mining_rate: profile.mining_rate + hourly
-        }).eq('id', user.id);
-        if (balError) throw balError;
-      }
+      // Logic for BOTH workers and vehicles: ADD to mining rate
+      let hourlyChange = 0;
       
-      showToast(`${asset.name} Purchased!`, "success");
+      if (asset.type === 'worker') {
+        hourlyChange = asset.rate;
+      } else {
+        // Calculate hourly return for vehicles
+        const profitTotal = asset.price * (asset.profit_percent / 100);
+        hourlyChange = profitTotal / (30 * 24);
+      }
+
+      // 1. Log the purchase in user_investments for history
+      const { error: invError } = await supabase.from('user_investments').insert([{
+        user_id: user.id,
+        asset_name: asset.name,
+        amount: asset.price,
+        profit_percent: asset.profit_percent || 0,
+        hourly_return: hourlyChange
+      }]);
+      if (invError) throw invError;
+      
+      // 2. Update user profile: Deduct balance and ADD to mining_rate
+      const { error: balError } = await supabase.from('profiles').update({ 
+        balance: profile.balance - asset.price,
+        mining_rate: profile.mining_rate + hourlyChange,
+        worker_level: asset.type === 'worker' ? asset.name : profile.worker_level // Keep latest worker name as level
+      }).eq('id', user.id);
+      
+      if (balError) throw balError;
+      
+      showToast(`${asset.name} Purchased! Rate increased by +${hourlyChange.toFixed(2)}`, "success");
       fetchInvestments();
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -88,15 +89,8 @@ export default function Shop({ profile, user, onUpdate }) {
         <AnimatePresence mode="popLayout">
           {assets.map((asset, index) => {
             const Icon = icons[asset.icon] || Zap;
-            let isOwned = false;
-            let countOwned = 0;
-
-            if (asset.type === 'worker') {
-              isOwned = profile?.worker_level === asset.name;
-            } else {
-              countOwned = investments.filter(i => i.asset_name === asset.name).length;
-              isOwned = false;
-            }
+            const countOwned = investments.filter(i => i.asset_name === asset.name).length;
+            const canAfford = profile?.balance >= asset.price;
             
             return (
               <motion.div 
@@ -105,21 +99,13 @@ export default function Shop({ profile, user, onUpdate }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 layout
-                className={`premium-card flex flex-col gap-4 relative overflow-hidden ${isOwned ? 'border-premium-gold/50 bg-premium-gold/5' : ''}`}
+                className={`premium-card flex flex-col gap-4 relative overflow-hidden ${countOwned > 0 ? 'border-premium-gold/30' : ''}`}
               >
-                {isOwned && (
-                  <motion.div 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -right-8 -top-8 bg-premium-gold p-12 rotate-45"
-                  />
-                )}
-                
                 <div className="flex justify-between items-start relative z-10">
                   <div className="flex items-center gap-3">
                     <motion.div 
                       whileHover={{ scale: 1.1, rotate: 5 }}
-                      className={`p-3 rounded-2xl ${isOwned || countOwned > 0 ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-800 text-premium-gold'}`}
+                      className={`p-3 rounded-2xl ${countOwned > 0 ? 'bg-premium-gold text-black shadow-neon-gold' : 'bg-zinc-800 text-premium-gold'}`}
                     >
                       <Icon size={24} />
                     </motion.div>
@@ -132,36 +118,25 @@ export default function Shop({ profile, user, onUpdate }) {
                       )}
                     </div>
                   </div>
-                  {isOwned && (
+                  {countOwned > 0 && (
                     <span className="bg-premium-gold/20 text-premium-gold text-[10px] uppercase font-bold px-3 py-1 rounded-full border border-premium-gold/30 backdrop-blur-md">
-                      Equipped
-                    </span>
-                  )}
-                  {countOwned > 0 && asset.type === 'vehicle' && (
-                    <span className="bg-green-500/20 text-green-400 text-[10px] uppercase font-bold px-3 py-1 rounded-full border border-green-500/30 backdrop-blur-md">
-                      Count: {countOwned}
+                      Owned: {countOwned}
                     </span>
                   )}
                 </div>
 
                 <motion.button 
-                  whileHover={!isOwned && profile?.balance >= asset.price ? { scale: 1.02 } : {}}
-                  whileTap={!isOwned && profile?.balance >= asset.price ? { scale: 0.98 } : {}}
+                  whileHover={canAfford ? { scale: 1.02 } : {}}
+                  whileTap={canAfford ? { scale: 0.98 } : {}}
                   onClick={() => buyAsset(asset)} 
-                  disabled={isOwned || profile?.balance < asset.price}
+                  disabled={!canAfford}
                   className={`w-full py-4 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 relative z-10 ${
-                    isOwned 
-                      ? 'bg-zinc-800 text-zinc-500 cursor-default border border-zinc-700' 
+                    !canAfford 
+                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700' 
                       : 'bg-premium-gold text-black shadow-neon-gold hover:shadow-neon-gold-lg'
                   }`}
                 >
-                  {isOwned ? (
-                    'Active Asset'
-                  ) : (
-                    <>
-                      {asset.type === 'worker' ? 'Hire Worker' : 'Buy Asset'} — {asset.price.toLocaleString()} 🪙
-                    </>
-                  )}
+                  {asset.type === 'worker' ? 'Hire' : 'Buy'} — {asset.price.toLocaleString()} 🪙
                 </motion.button>
               </motion.div>
             );

@@ -246,9 +246,14 @@ export default function Admin({ user }) {
                   <div>
                     <p className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wide">Assets Owned:</p>
                     <div className="flex flex-wrap gap-2">
-                      {userInvs.map(inv => (
-                        <span key={inv.id} className="text-xs bg-zinc-800 border border-zinc-700 px-2 py-1 rounded text-zinc-300">
-                          {inv.asset_name}
+                      {Object.entries(
+                        userInvs.reduce((acc, inv) => {
+                          acc[inv.asset_name] = (acc[inv.asset_name] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([name, count]) => (
+                        <span key={name} className="text-xs bg-zinc-800 border border-zinc-700 px-2 py-1 rounded text-zinc-300">
+                          {name} {count > 1 ? `(x${count})` : ''}
                         </span>
                       ))}
                     </div>
