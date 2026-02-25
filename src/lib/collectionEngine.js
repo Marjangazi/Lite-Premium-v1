@@ -414,4 +414,7 @@ export const performCollection = async () => {
   return await collectionEngine.collectEarnings();
 };
 
+// Alias for backward compatibility
+export const collectEarnings = performCollection;
+
 export default collectionEngine;

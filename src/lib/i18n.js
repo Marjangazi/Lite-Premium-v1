@@ -322,3 +322,33 @@ export const formatPercentage = (value) => {
   const lang = getCurrentLanguage();
   return lang === 'bn' ? `${value}%` : `${value}%`;
 };
+
+// React hook for translation
+export const useTranslation = () => {
+  const currentLanguage = getCurrentLanguage();
+  
+  const translate = (key) => {
+    return translations[currentLanguage][key] || translations.en[key] || key;
+  };
+  
+  const formatCurrency = (amount, currency = 'coins') => {
+    if (currency === 'bdt') {
+      return currentLanguage === 'bn' ? `${amount} টাকা` : `৳${amount}`;
+    }
+    return currentLanguage === 'bn' ? `${amount} কয়েন` : `${amount} Coins`;
+  };
+  
+  const formatPercent = (value) => {
+    return currentLanguage === 'bn' ? `${value}%` : `${value}%`;
+  };
+  
+  return {
+    t: translate,
+    i18n: {
+      language: currentLanguage,
+      changeLanguage: setLanguage
+    },
+    formatCurrency,
+    formatPercent
+  };
+};

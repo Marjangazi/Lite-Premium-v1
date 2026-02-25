@@ -278,6 +278,9 @@ export const getDeviceFingerprint = async () => {
   return await deviceFingerprint.generateFingerprint();
 };
 
+// Alias for backward compatibility
+export const generateDeviceFingerprint = getDeviceFingerprint;
+
 export const validateDevice = async () => {
   return await deviceFingerprint.validateFingerprint();
 };

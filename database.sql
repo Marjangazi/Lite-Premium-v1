@@ -97,7 +97,6 @@ CREATE TABLE IF NOT EXISTS public.admin_settings (
   referral_bonus FLOAT DEFAULT 720,
   min_withdraw FLOAT DEFAULT 7200,
   is_maintenance BOOLEAN DEFAULT FALSE,
-  exchange_rate FLOAT DEFAULT 720,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -473,8 +472,8 @@ VALUES (0, 1.0, 1.0, 0.0)
 ON CONFLICT (id) DO NOTHING;
 
 -- Initial Admin Settings
-INSERT INTO public.admin_settings (cashout_number, referral_bonus, min_withdraw, exchange_rate)
-VALUES ('+8801875354842', 720, 7200, 720)
+INSERT INTO public.admin_settings (cashout_number, referral_bonus, min_withdraw)
+VALUES ('+8801875354842', 720, 7200)
 ON CONFLICT (id) DO NOTHING;
 
 -- Community Links
