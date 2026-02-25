@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShoppingBag, Zap, Shield, Crown, HardHat, TrendingUp, Sparkles, AlertCircle, ShoppingCart, Rocket, Flame, Fingerprint, Activity, Layers } from 'lucide-react';
+import { ShoppingBag, Zap, Shield, Crown, HardHat, TrendingUp, Sparkles, AlertCircle, ShoppingCart, Rocket, Flame, Fingerprint, Activity, Layers, Truck, Bus, Hammer, Tractor, Store, PlusSquare, Box } from 'lucide-react';
 import { useToast } from '../lib/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const COIN_TO_BDT = 720;
-const icons = { HardHat, Zap, Shield, Crown, Rocket, Flame, Activity, Layers };
+const icons = { HardHat, Zap, Shield, Activity, Layers, Truck, Bus, Hammer, Tractor, Store, ShoppingBag, PlusSquare, Rocket, Flame, Box };
 
 export default function Shop({ profile, user, onUpdate }) {
   const showToast = useToast();
@@ -74,7 +74,7 @@ export default function Shop({ profile, user, onUpdate }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
         <div className="relative">
-          <div className="w-24 h-24 border-4 border-premium-gold/10 rounded-[2.5rem] animate-ping absolute" />
+          <div className="w-24 h-24 border-4 border-premium-gold/10 rounded-[2rem] animate-ping absolute" />
           <div className="w-24 h-24 border-[6px] border-premium-gold border-t-transparent rounded-[2rem] animate-spin shadow-neon-gold" />
            <ShoppingCart className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-premium-gold animate-bounce" size={24} />
         </div>
@@ -119,7 +119,7 @@ export default function Shop({ profile, user, onUpdate }) {
       <div className="space-y-10">
         <AnimatePresence mode="popLayout">
           {filteredAssets.map((asset, index) => {
-            const Icon = icons[asset.icon] || Zap;
+            const Icon = icons[asset.icon] || Box;
             const unitsLeft = (asset.stock_limit || 100) - (asset.units_sold || 0);
             const isInvestor = asset.type === 'investor';
             const isSoldOut = unitsLeft <= 0;
@@ -141,11 +141,11 @@ export default function Shop({ profile, user, onUpdate }) {
                   <div className="flex justify-between items-center mb-10">
                      <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3">
-                           <div className={`w-3 h-3 rounded-full ${unitsLeft < 15 ? 'bg-red-500 animate-pulse shadow-neon-red' : 'bg-green-500 shadow-neon-green'}`} />
+                           <div className={`w-3 h-3 rounded-full ${unitsLeft < 20 ? 'bg-red-500 animate-pulse shadow-neon-red' : 'bg-green-500 shadow-neon-green'}`} />
                            <span className="text-[10px] font-black uppercase text-zinc-700 tracking-widest">{unitsLeft} Vectors Loaded</span>
                         </div>
                         <div className="h-1 w-24 bg-zinc-900 rounded-full overflow-hidden">
-                           <div className="h-full bg-premium-gold" style={{ width: `${(unitsLeft/asset.stock_limit)*100}%` }} />
+                           <div className="h-full bg-premium-gold" style={{ width: `${(unitsLeft/(asset.stock_limit || 100))*100}%` }} />
                         </div>
                      </div>
                      <span className={`text-[9px] font-black uppercase px-5 py-2 rounded-full border ${isInvestor ? 'bg-premium-gold/10 text-premium-gold border-premium-gold/20 shadow-neon-gold/5' : 'bg-zinc-900 text-zinc-600 border-zinc-800'}`}>
@@ -162,7 +162,7 @@ export default function Shop({ profile, user, onUpdate }) {
                         <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">{asset.name}</h3>
                         <div className="flex items-center gap-3 mt-3">
                            {ownedCount > 0 && <span className="bg-white/5 text-premium-gold text-[9px] font-black px-4 py-1.5 rounded-full border border-premium-gold/10 animate-shimmer">Deployed: {ownedCount}</span>}
-                           <span className="text-zinc-700 text-[10px] font-black italic uppercase tracking-widest border-l border-zinc-800 pl-3">Neural Contract</span>
+                           <span className="text-zinc-700 text-[10px] font-black italic uppercase tracking-widest border-l border-zinc-800 pl-3">{asset.lifecycle_days}D Contract</span>
                         </div>
                       </div>
                       <div className="absolute top-0 right-0 p-4 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-1000">
@@ -214,7 +214,7 @@ export default function Shop({ profile, user, onUpdate }) {
          <div className="relative z-10 space-y-2">
             <p className="text-white text-xs font-black uppercase tracking-widest leading-none">Market Integrity Protocol</p>
             <p className="text-[9px] text-zinc-700 font-bold leading-relaxed uppercase tracking-tight">
-              Strategic Notice: Capital stability is maintained by strictly limiting market entry vectors. All assets carry a guaranteed 30-day lifecycle with automated liquidations at term. All purchases are final.
+              Strategic Notice: Capital stability is maintained by strictly limiting market entry vectors. All assets carry a guaranteed lifecycle with automated liquidations at term. All purchases are final.
             </p>
          </div>
       </div>

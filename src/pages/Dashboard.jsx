@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Coins, TrendingUp, Clock, UserPlus, Sparkles, MessageSquare, BadgeCheck, AlertTriangle, Newspaper, Shield, Trophy, Activity, Rocket, Zap, Fingerprint } from 'lucide-react';
+import { Coins, TrendingUp, Clock, UserPlus, Sparkles, MessageSquare, BadgeCheck, AlertTriangle, Newspaper, Shield, Trophy, Activity, Rocket, Zap, Fingerprint, Truck, Bus, Hammer, Tractor, Store, ShoppingCart, PlusSquare, Layers, Box } from 'lucide-react';
 import { useToast } from '../lib/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const COIN_TO_BDT = 720;
+const icons = { Zap, Shield, Activity, Layers, Truck, Bus, Hammer, Tractor, Store, ShoppingBag: ShoppingCart, PlusSquare, Rocket, Box };
 
 export default function Dashboard({ user, profile, onUpdate }) {
   const [investments, setInvestments] = useState([]);
@@ -28,7 +29,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
   useEffect(() => {
     if (profile && investments.length >= 0) {
       clearInterval(timerRef.current);
-      const interval = 80; // Faster update for "real-time" feel
+      const interval = 80;
       
       timerRef.current = setInterval(() => {
         const lastCollect = new Date(profile.last_collect).getTime();
@@ -36,19 +37,16 @@ export default function Dashboard({ user, profile, onUpdate }) {
         const diffMs = now - lastCollect;
         const diffHours = diffMs / (1000 * 60 * 60);
 
-        // Logic: 24h cycle for Workers
         const progress = Math.min((diffMs / (24 * 60 * 60 * 1000)) * 100, 100);
         setCycleProgress(progress);
 
-        // Calculate Worker Yield (Capped at 24h)
         const workerRate = profile.mining_rate || 0;
         const workerYield = Math.min(diffHours, 24) * workerRate;
 
-        // Calculate Investor Yield (Linear, No Cap)
         let investorRate = 0;
         investments.forEach(inv => {
           if (inv.type === 'investor' && inv.assets?.profit_tier_coins) {
-             investorRate += inv.assets.profit_tier_coins / (30 * 24); // Assuming monthly profit
+             investorRate += inv.assets.profit_tier_coins / (30 * 24);
           }
         });
         const investorYield = diffHours * investorRate;
@@ -65,7 +63,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
   };
 
   const fetchInvestments = async () => {
-    const { data } = await supabase.from('user_investments').select('*, assets(profit_tier_coins)').eq('user_id', user.id).eq('status', 'active');
+    const { data } = await supabase.from('user_investments').select('*, assets(*)').eq('user_id', user.id).eq('status', 'active');
     if (data) setInvestments(data);
   };
 
@@ -174,10 +172,23 @@ export default function Dashboard({ user, profile, onUpdate }) {
                 <p className="text-5xl font-black font-mono text-green-400 tracking-tighter tabular-nums drop-shadow-neon-green">
                   +{liveCoins.toFixed(5)}
                 </p>
-                <div className="flex items-center gap-2 mt-4">
-                  <span className="text-green-900 font-black italic text-[9px] uppercase tracking-tighter">Extraction Magnitude</span>
-                  <div className="flex-1 h-[1px] bg-green-900/20" />
-                </div>
+                
+                <button 
+                  onClick={collectIncome}
+                  disabled={collecting || cycleProgress < 1}
+                  className={`mt-6 w-full py-5 rounded-[1.5rem] font-black italic uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-300 ${collecting ? 'bg-zinc-800 text-zinc-500' : cycleProgress >= 95 ? 'bg-red-500 text-white shadow-neon-red' : 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500 hover:text-black shadow-neon-green/10'}`}
+                >
+                  {collecting ? (
+                    <div className="flex items-center gap-2">
+                       <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                       COLLECTING...
+                    </div>
+                  ) : (
+                    <>
+                      <PlusSquare size={16} /> Collect Profit
+                    </>
+                  )}
+                </button>
              </div>
              
              <div className="space-y-3 relative z-10">
@@ -192,6 +203,28 @@ export default function Dashboard({ user, profile, onUpdate }) {
                      className={`h-full transition-all duration-300 ${cycleProgress >= 95 ? 'bg-red-500 shadow-neon-red' : 'bg-gradient-to-r from-premium-gold to-yellow-500'}`}
                    />
                 </div>
+             </div>
+          </div>
+          
+          {/* List of Active Asset Icons */}
+          <div className="space-y-4 pt-4">
+             <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest px-2">Active Deployment Vectors</p>
+             <div className="flex flex-wrap gap-3">
+                {investments.length === 0 ? (
+                  <div className="w-full py-8 border-2 border-dashed border-zinc-900 rounded-3xl flex items-center justify-center grayscale opacity-20">
+                     <p className="text-[10px] font-black uppercase">No Active Vectors</p>
+                  </div>
+                ) : (
+                  investments.map((inv, idx) => {
+                    const Icon = icons[inv.assets?.icon] || Box;
+                    return (
+                      <div key={idx} className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-inner group hover:border-premium-gold/30 transition-all relative">
+                         <Icon size={20} className="text-zinc-600 group-hover:text-premium-gold transition-colors" />
+                         <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-neon-green" />
+                      </div>
+                    )
+                  })
+                )}
              </div>
           </div>
         </div>
@@ -217,46 +250,6 @@ export default function Dashboard({ user, profile, onUpdate }) {
                <p className="text-white font-black font-mono text-xl tracking-tighter">+{investorRate.toFixed(1)} <span className="text-[10px] text-zinc-800 italic">c/h</span></p>
             </div>
          </div>
-      </div>
-
-      {/* Tactical Sync Terminal */}
-      <div className={`p-10 rounded-[3rem] bg-zinc-950 border-2 transition-all duration-700 shadow-2xl ${cycleProgress >= 90 ? 'border-red-500/40 shadow-neon-red/5' : 'border-zinc-900'}`}>
-         <div className="flex gap-6 items-start mb-10">
-            <div className={`p-5 rounded-3xl transition-all duration-500 ${cycleProgress >= 95 ? 'bg-red-600 text-white shadow-neon-red animate-pulse' : 'bg-zinc-900 text-zinc-700 border border-zinc-800'}`}>
-               <AlertTriangle size={32} />
-            </div>
-            <div className="space-y-2">
-               <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter leading-none">Sync <span className="text-premium-gold">Protocol</span></h3>
-               <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-tight leading-relaxed">
-                 {cycleProgress >= 95 ? 'CRITICAL: Worker cycle integrity compromised. Emergency sync required.' : 'Establish secure neural handshake to transfer accumulated dividends to capital reserves.'}
-               </p>
-            </div>
-         </div>
-
-         <button 
-           onClick={collectIncome}
-           disabled={collecting}
-           className={`w-full h-24 rounded-[2.5rem] font-black italic uppercase text-2xl tracking-tighter transition-all duration-500 relative overflow-hidden flex items-center justify-center gap-5 border-4 border-black/20 ${
-             cycleProgress < 1 ? 'opacity-30 grayscale cursor-not-allowed bg-zinc-900' : 
-             cycleProgress >= 95 ? 'bg-red-600 text-white shadow-neon-red scale-[1.02]' : 
-             'bg-premium-gold text-black shadow-neon-gold hover:scale-[1.02] active:scale-[0.98]'
-           }`}
-         >
-           <div className="absolute inset-0 bg-white/20 -translate-x-full hover:translate-x-full transition-transform duration-1000 skew-x-12" />
-           {collecting ? (
-             <div className="flex items-center gap-4">
-                <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin" />
-                <span>Extracing...</span>
-             </div>
-           ) : (
-             <>
-               <span className="relative z-10">Execute Global Sync</span>
-               <div className="relative z-10 w-12 h-12 bg-black/10 rounded-2xl flex items-center justify-center">
-                  <Sparkles size={24} className="animate-pulse" />
-               </div>
-             </>
-           )}
-         </button>
       </div>
 
       {/* Referral Matrix */}
