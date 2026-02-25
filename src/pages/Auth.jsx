@@ -57,9 +57,9 @@ export default function Auth() {
             <LayoutDashboard className="text-black size-10" />
           </div>
           <h1 className="text-5xl font-black italic tracking-tighter text-premium-gold mb-3">
-            PARTIMER <span className="text-white not-italic">OFFICIAL</span>
+            LITE<span className="text-white not-italic">PREMIUM</span>
           </h1>
-          <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">Premium Financial Ecosystem</p>
+          <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">Digital Business & Investment Platform</p>
         </div>
 
         <div className="premium-card bg-zinc-900/40 border-zinc-800/50 p-8">

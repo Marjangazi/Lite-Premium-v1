@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Coins, TrendingUp, Clock, UserPlus, Sparkles, MessageSquare, BadgeCheck, AlertTriangle, Newspaper, Shield, Trophy, Activity, Rocket, Zap, Fingerprint, Truck, Bus, Hammer, Tractor, Store, ShoppingCart, PlusSquare, Layers, Box } from 'lucide-react';
+import { Coins, TrendingUp, Clock, UserPlus, Sparkles, MessageSquare, BadgeCheck, AlertTriangle, Newspaper, Shield, Trophy, Activity, Rocket, Zap, Fingerprint, Truck, Bus, Hammer, Tractor, Store, ShoppingCart, PlusSquare, Layers, Box, Briefcase } from 'lucide-react';
 import { useToast } from '../lib/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -77,7 +77,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
       
       onUpdate();
       setLiveCoins(0);
-      showToast("Neural extraction sequence complete. Capital secured.", "success");
+      showToast("Profit extraction complete. Income secured.", "success");
     } catch (err) {
       showToast("Verification failed. Retry extraction.", "error");
     } finally {
@@ -109,13 +109,15 @@ export default function Dashboard({ user, profile, onUpdate }) {
     }
   });
 
+  const netAssetValue = investments.reduce((acc, inv) => acc + (inv.amount || 0), 0);
+
   return (
     <div className="p-6 max-w-lg mx-auto space-y-12 pb-40">
       {/* High-Definition Ticker */}
       <div className="relative h-14 bg-zinc-950/80 border-y-2 border-zinc-900 flex items-center overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-3xl">
         <div className="absolute left-0 top-0 bottom-0 px-8 bg-premium-gold text-black flex items-center font-black italic text-[11px] z-20 skew-x-[-20deg] -ml-6 border-r-4 border-black/20">
           <div className="skew-x-[20deg] flex items-center gap-2">
-            <Zap size={14} fill="currentColor" /> REALTIME_OS
+            <Zap size={14} fill="currentColor" /> LITEPREMIUM_OS
           </div>
         </div>
         <div className="flex gap-24 animate-marquee whitespace-nowrap pl-32 relative z-10">
@@ -152,9 +154,15 @@ export default function Dashboard({ user, profile, onUpdate }) {
                       <span className="text-zinc-800 text-[8px] font-black mt-1">v.24.4</span>
                    </div>
                 </div>
-                <p className="text-zinc-600 font-bold text-[11px] uppercase italic tracking-tight">
-                  ≈ ৳ {(profile?.balance / COIN_TO_BDT).toLocaleString()} VALUATION
-                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-zinc-600 font-bold text-[10px] uppercase italic tracking-tight">
+                    ≈ ৳ {(profile?.balance / COIN_TO_BDT).toLocaleString()} VALUATION
+                  </p>
+                  <div className="h-4 w-[1px] bg-zinc-800" />
+                  <p className="text-premium-gold font-black text-[10px] uppercase italic tracking-tight flex items-center gap-1">
+                    <Briefcase size={10} /> ৳ {(netAssetValue / COIN_TO_BDT).toLocaleString()} Assets
+                  </p>
+                </div>
              </div>
           </div>
 
@@ -164,7 +172,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
              </div>
              <div className="flex justify-between items-center text-[10px] font-black uppercase text-zinc-700 tracking-widest relative z-10">
                 <span className="flex items-center gap-3 italic">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Neural Inflow
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live Income
                 </span>
                 <span className="text-green-500/50 italic">H-SYNC Active</span>
              </div>
@@ -212,7 +220,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
              <div className="flex flex-wrap gap-3">
                 {investments.length === 0 ? (
                   <div className="w-full py-8 border-2 border-dashed border-zinc-900 rounded-3xl flex items-center justify-center grayscale opacity-20">
-                     <p className="text-[10px] font-black uppercase">No Active Vectors</p>
+                     <p className="text-[10px] font-black uppercase">No Active Assets</p>
                   </div>
                 ) : (
                   investments.map((inv, idx) => {
@@ -246,7 +254,7 @@ export default function Dashboard({ user, profile, onUpdate }) {
                <Rocket className="text-premium-gold size-6" fill="currentColor" />
             </div>
             <div className="space-y-1">
-               <p className="text-[9px] font-black uppercase text-zinc-700 tracking-[0.2em]">Asset Yield</p>
+               <p className="text-[9px] font-black uppercase text-zinc-700 tracking-[0.2em]">Investor Yield</p>
                <p className="text-white font-black font-mono text-xl tracking-tighter">+{investorRate.toFixed(1)} <span className="text-[10px] text-zinc-800 italic">c/h</span></p>
             </div>
          </div>
@@ -260,12 +268,12 @@ export default function Dashboard({ user, profile, onUpdate }) {
                <UserPlus className="text-premium-gold size-6" />
             </div>
             <div>
-               <h3 className="text-xl font-black italic uppercase text-white tracking-tighter">Viral <span className="text-premium-gold">Vector</span></h3>
+               <h3 className="text-xl font-black italic uppercase text-white tracking-tighter">Growth <span className="text-premium-gold">Matrix</span></h3>
                <p className="text-[9px] font-black uppercase text-zinc-700 tracking-widest mt-1">Expansion Protocol Active</p>
             </div>
          </div>
          <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-            <div className="flex-1 bg-black p-6 rounded-[1.5rem] border border-zinc-900 flex justify-center items-center">
+            <div className="flex-1 bg-black p-6 rounded-[1.5rem] border border-zinc-900 flex justify-center items-center overflow-hidden">
               <p className="text-[10px] text-zinc-600 font-mono font-black italic tracking-tighter truncate w-full">
                 {window.location.origin}/?ref={user.id}
               </p>
@@ -273,11 +281,11 @@ export default function Dashboard({ user, profile, onUpdate }) {
             <button 
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/?ref=${user.id}`);
-                showToast("Vector link encoded!", "success");
+                showToast("Refer link encoded!", "success");
               }}
               className="bg-zinc-900 text-premium-gold px-10 py-6 rounded-[1.5rem] border border-premium-gold/20 font-black text-xs uppercase italic tracking-tighter hover:bg-premium-gold hover:text-black transition-all active:scale-95 shadow-neon-gold/5"
             >
-              ENCODE
+              REFER
             </button>
          </div>
          <p className="text-center text-[9px] font-black uppercase text-zinc-800 tracking-[0.4em] pt-4">Network Growth = Capital Dominance</p>

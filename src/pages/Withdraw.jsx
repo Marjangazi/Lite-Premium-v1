@@ -21,7 +21,10 @@ export default function Withdraw({ profile, user, onUpdate }) {
     if (user) {
       fetchHistory();
     }
-  }, [user, activeTab]);
+    if (profile?.bdt_number) {
+      setNumber(profile.bdt_number);
+    }
+  }, [user, activeTab, profile]);
 
   const fetchSettings = async () => {
     const { data } = await supabase.from('admin_settings').select('*').eq('id', 'global').single();
@@ -167,7 +170,7 @@ export default function Withdraw({ profile, user, onUpdate }) {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] uppercase font-black text-zinc-700 tracking-[0.3em] block ml-2">Verified Destination (Number)</label>
+                <label className="text-[10px] uppercase font-black text-zinc-700 tracking-[0.3em] block ml-2">Cash Out Number (bKash/Nagad/Rocket)</label>
                 <input 
                   type="text" 
                   value={number}
@@ -188,7 +191,7 @@ export default function Withdraw({ profile, user, onUpdate }) {
             <button 
               type="submit" 
               disabled={submitting}
-              className="h-24 bg-red-500 text-white rounded-[2.5rem] shadow-neon-red hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center relative overflow-hidden group border-4 border-black/20 font-black italic tracking-tighter text-2xl uppercase italic"
+              className="h-24 bg-red-500 text-white rounded-[2.5rem] shadow-neon-red hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center relative overflow-hidden group border-4 border-black/20 font-black italic tracking-tighter text-2xl uppercase"
             >
               <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
               {submitting ? (

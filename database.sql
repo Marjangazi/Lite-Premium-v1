@@ -38,6 +38,11 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bonus_rate FLOAT DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referrer_id UUID REFERENCES public.profiles(id);
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referral_count INTEGER DEFAULT 0;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS telegram TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS imo TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bdt_number TEXT;
 
 -- Global Admin Settings
 CREATE TABLE IF NOT EXISTS public.admin_settings (
@@ -266,6 +271,11 @@ BEGIN
   IF total_admin_penalty > 0 AND admin_id IS NOT NULL THEN
     UPDATE public.profiles SET balance = balance + total_admin_penalty WHERE id = admin_id;
   END IF;
+
+  -- 7. CLEANUP EXPIRED ASSETS
+  UPDATE public.user_investments 
+  SET status = 'expired' 
+  WHERE user_id = target_user_id AND expiry_date <= current_time;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -294,7 +304,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- CLEANUP ASSETS
 DELETE FROM public.assets;
 
--- INSERT WORKER ASSETS (5% Monthly Fixed Profit Logic)
+-- INSERT WORKER ASSETS (5% Monthly Fixed Profit Logic - LitePremium Official)
 -- Note: 'rate' is Coins/Hour. 720 hours = 30 days.
 -- Price * 0.05 / 720 = Hourly Rate
 INSERT INTO public.assets (name, type, price, rate, icon, stock_limit, lifecycle_days) VALUES 

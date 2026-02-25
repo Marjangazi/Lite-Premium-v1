@@ -37,7 +37,7 @@ export default function Shop({ profile, user, onUpdate }) {
 
   const buyAsset = async (asset) => {
     if (!profile) return;
-    if (profile.balance < asset.price) return showToast("Insufficient Liquidity!", "error");
+    if (profile.balance < asset.price) return showToast("Insufficient Balance! Please Cash In.", "error");
     if (asset.units_sold >= asset.stock_limit) return showToast("Market Exhausted!", "error");
     
     try {
@@ -47,7 +47,8 @@ export default function Shop({ profile, user, onUpdate }) {
         asset_name: asset.name,
         type: asset.type,
         amount: asset.price,
-        hourly_return: asset.type === 'worker' ? asset.rate : 0
+        hourly_return: asset.type === 'worker' ? asset.rate : 0,
+        expiry_date: new Date(Date.now() + (asset.lifecycle_days || 30) * 24 * 60 * 60 * 1000).toISOString()
       }]);
       if (invError) throw invError;
       
@@ -62,7 +63,7 @@ export default function Shop({ profile, user, onUpdate }) {
       }).eq('id', user.id);
       if (balError) throw balError;
       
-      showToast(`${asset.name} Vector Initialized!`, "success");
+      showToast(`${asset.name} Investment Initialized!`, "success");
       fetchData();
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -93,12 +94,11 @@ export default function Shop({ profile, user, onUpdate }) {
              <ShoppingBag className="text-premium-gold size-10" />
           </div>
           <div>
-            <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">Market <span className="text-premium-gold">Matrix</span></h1>
-            <p className="text-zinc-600 text-[10px] uppercase font-black tracking-[0.4em] mt-3 leading-none">Sector Selection Terminal</p>
+            <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">Market <span className="text-premium-gold">Sector</span></h1>
+            <p className="text-zinc-600 text-[10px] uppercase font-black tracking-[0.4em] mt-3 leading-none">LitePremium Investing Center</p>
           </div>
         </div>
 
-        {/* Cyber-Mechanical Category Switcher */}
         <div className="flex bg-zinc-950 border-2 border-zinc-900 p-2 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden relative group">
            {['worker', 'investor'].map((cat) => (
              <button 
@@ -135,21 +135,20 @@ export default function Shop({ profile, user, onUpdate }) {
                 className={`transition-all duration-700 ${isSoldOut ? 'opacity-30 grayscale pointer-events-none' : ''}`}
               >
                 <div className={`relative bg-zinc-950 border-2 rounded-[3.5rem] p-10 overflow-hidden group hover:border-premium-gold/30 transition-all duration-700 shadow-3xl ${isInvestor ? 'border-premium-gold/10' : 'border-zinc-900'}`}>
-                  {/* Scarcity / Identity Layer */}
                   <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-premium-gold/20 to-transparent" />
                   
                   <div className="flex justify-between items-center mb-10">
                      <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3">
                            <div className={`w-3 h-3 rounded-full ${unitsLeft < 20 ? 'bg-red-500 animate-pulse shadow-neon-red' : 'bg-green-500 shadow-neon-green'}`} />
-                           <span className="text-[10px] font-black uppercase text-zinc-700 tracking-widest">{unitsLeft} Vectors Loaded</span>
+                           <span className="text-[10px] font-black uppercase text-zinc-700 tracking-widest">{unitsLeft} Slots Left</span>
                         </div>
                         <div className="h-1 w-24 bg-zinc-900 rounded-full overflow-hidden">
                            <div className="h-full bg-premium-gold" style={{ width: `${(unitsLeft/(asset.stock_limit || 100))*100}%` }} />
                         </div>
                      </div>
                      <span className={`text-[9px] font-black uppercase px-5 py-2 rounded-full border ${isInvestor ? 'bg-premium-gold/10 text-premium-gold border-premium-gold/20 shadow-neon-gold/5' : 'bg-zinc-900 text-zinc-600 border-zinc-800'}`}>
-                        {isInvestor ? 'Capital Yield' : 'Operational ROI'}
+                        {isInvestor ? 'Fixed Profit' : 'Active ROI'}
                      </span>
                   </div>
 
@@ -161,29 +160,26 @@ export default function Shop({ profile, user, onUpdate }) {
                       <div className="space-y-2">
                         <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">{asset.name}</h3>
                         <div className="flex items-center gap-3 mt-3">
-                           {ownedCount > 0 && <span className="bg-white/5 text-premium-gold text-[9px] font-black px-4 py-1.5 rounded-full border border-premium-gold/10 animate-shimmer">Deployed: {ownedCount}</span>}
-                           <span className="text-zinc-700 text-[10px] font-black italic uppercase tracking-widest border-l border-zinc-800 pl-3">{asset.lifecycle_days}D Contract</span>
+                           {ownedCount > 0 && <span className="bg-white/5 text-premium-gold text-[9px] font-black px-4 py-1.5 rounded-full border border-premium-gold/10 animate-shimmer">Owned: {ownedCount}</span>}
+                           <span className="text-zinc-700 text-[10px] font-black italic uppercase tracking-widest border-l border-zinc-800 pl-3">{asset.lifecycle_days}D Term</span>
                         </div>
-                      </div>
-                      <div className="absolute top-0 right-0 p-4 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-1000">
-                         <Icon size={120} />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-5">
                       <div className="bg-black/80 p-6 rounded-[2rem] border-2 border-zinc-900 shadow-inner group-hover:border-zinc-800 transition-colors">
-                        <p className="text-zinc-800 text-[9px] uppercase font-black mb-1 px-1">Acquisition Cost</p>
+                        <p className="text-zinc-800 text-[9px] uppercase font-black mb-1 px-1">Price</p>
                         <p className="text-premium-gold font-mono font-black text-2xl tabular-nums italic">{asset.price.toLocaleString()} 🪙</p>
-                        <p className="text-[10px] text-zinc-700 font-bold mt-2 tracking-tighter italic border-t border-zinc-900/50 pt-2">৳ {(asset.price / COIN_TO_BDT).toFixed(0)} BDT</p>
+                        <p className="text-[10px] text-zinc-700 font-bold mt-2 tracking-tighter italic border-t border-zinc-900/50 pt-2">৳ {(asset.price / COIN_TO_BDT).toFixed(0)} TK</p>
                       </div>
                       <div className="bg-black/80 p-6 rounded-[2rem] border-2 border-zinc-900 shadow-inner group-hover:border-zinc-800 transition-colors">
                         <p className={`text-[9px] uppercase font-black mb-1 px-1 ${isInvestor ? 'text-green-500' : 'text-blue-500'}`}>
-                          {isInvestor ? 'Monthly Passive' : 'Hourly Net'}
+                          {isInvestor ? 'Monthly' : 'Hourly'}
                         </p>
                         <p className="text-white font-mono font-black text-2xl tabular-nums italic">
                           {isInvestor ? `${asset.profit_tier_coins}` : `+${asset.rate}`} <span className="text-[10px] text-zinc-800">C/H</span>
                         </p>
-                        <p className={`text-[10px] font-bold mt-2 tracking-tighter italic border-t border-zinc-900/50 pt-2 ${isInvestor ? 'text-green-900' : 'text-blue-900'}`}>Secured Logic</p>
+                        <p className={`text-[10px] font-bold mt-2 tracking-tighter italic border-t border-zinc-900/50 pt-2 ${isInvestor ? 'text-green-900' : 'text-blue-900'}`}>Investment Logic</p>
                       </div>
                     </div>
 
@@ -194,9 +190,7 @@ export default function Shop({ profile, user, onUpdate }) {
                       }`}
                     >
                       <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
-                      <Fingerprint size={28} className="animate-pulse opacity-50" />
-                      <span className="relative z-10 tracking-widest">Execute Initialization</span>
-                      <Sparkles className="relative z-10 group-hover:rotate-45 transition-transform" />
+                      <span className="relative z-10 tracking-widest">BUY NOW</span>
                     </button>
                   </div>
                 </div>

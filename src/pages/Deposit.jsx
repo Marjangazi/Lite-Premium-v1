@@ -178,18 +178,19 @@ export default function Deposit({ user }) {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] uppercase font-black text-zinc-700 tracking-widest block ml-2">Verification Vector (TrxID)</label>
+                <label className="text-[10px] uppercase font-black text-zinc-700 tracking-widest block ml-2">Payment Proof (TrxID / Number / Name)</label>
                 <input 
                   type="text" 
                   value={trxId}
                   onChange={(e) => setTrxId(e.target.value)}
-                  placeholder="ID-HASH-PROTOCOL"
-                  className="w-full bg-zinc-900/50 border-2 border-zinc-800 rounded-[2.5rem] py-8 px-10 text-white focus:border-premium-gold focus:bg-black outline-none transition-all font-mono font-black tracking-[0.2em] uppercase text-xl placeholder:text-zinc-800"
+                  placeholder="TrxID, Sender Number, or Name"
+                  className="w-full bg-zinc-900/50 border-2 border-zinc-800 rounded-[2.5rem] py-8 px-10 text-white focus:border-premium-gold focus:bg-black outline-none transition-all font-mono font-black tracking-[0.1em] uppercase text-xl placeholder:text-zinc-800"
                 />
+                <p className="text-[9px] text-zinc-700 font-black uppercase italic ml-4">System: Submit your 8-digit TrxID or bKash Number for rapid verification.</p>
               </div>
             </div>
 
-            <div className="bg-red-500/5 border-2 border-red-500/10 p-6 rounded-[2rem] flex gap-5">
+            <div className="bg-red-500/5 border-2 border-red-500/10 p-6 rounded-[2rem] flex gap-5 shadow-inner">
                <ShieldCheck className="text-red-500 size-10 flex-shrink-0 opacity-40" />
                <p className="text-[9px] text-zinc-600 font-bold leading-relaxed uppercase tracking-tight">
                  Identity & Trust Protocol: Submission of fraudulent verification vectors (TrxID) will lead to permanent terminal termination and capital seizure. All logs are recorded.
