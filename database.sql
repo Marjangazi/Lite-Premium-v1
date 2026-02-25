@@ -1,22 +1,12 @@
 -- ========================================================
--- PROJECT: ParTimer Official (Expert Financial Schema)
--- Version: 2.0 (Fintech Grade)
+-- PROJECT: LitePremium (Expert Financial Schema)
+-- Version: 3.0 (Official Rebrand)
+-- Description: Digital Business & Investment Command
 -- ========================================================
 
--- 1. CLEANUP FOR FRESH START (Optional: Uncomment if you want to reset everything)
--- DROP TABLE IF EXISTS public.withdrawals CASCADE;
--- DROP TABLE IF EXISTS public.coin_requests CASCADE;
--- DROP TABLE IF EXISTS public.newsfeed CASCADE;
--- DROP TABLE IF EXISTS public.user_investments CASCADE;
--- DROP TABLE IF EXISTS public.assets CASCADE;
--- DROP TABLE IF EXISTS public.profiles CASCADE;
+-- 1. CORE TABLES & MIGRATIONS
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
-DROP FUNCTION IF EXISTS public.handle_user_sync() CASCADE;
-
--- 2. CORE TABLES & MIGRATIONS
-
--- Profiles with Badge & Referral System
+-- Profiles with Badge & Referral System (Rebranded to LitePremium)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
@@ -29,22 +19,22 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   referrer_id UUID REFERENCES public.profiles(id),
   referral_count INTEGER DEFAULT 0,
   last_collect TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  name TEXT,
+  telegram TEXT,
+  whatsapp TEXT,
+  imo TEXT,
+  bdt_number TEXT
 );
 
--- Ensure profiles columns exist for existing DBs
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS badge TEXT DEFAULT 'Silver';
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bonus_rate FLOAT DEFAULT 0;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referrer_id UUID REFERENCES public.profiles(id);
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referral_count INTEGER DEFAULT 0;
+-- Ensure profiles columns exist for existing DBs (Migration Path)
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS telegram TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS whatsapp TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS imo TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bdt_number TEXT;
 
--- Global Admin Settings
+-- Global Admin Settings (LitePremium Master Config)
 CREATE TABLE IF NOT EXISTS public.admin_settings (
   id TEXT PRIMARY KEY DEFAULT 'global',
   cashout_number TEXT DEFAULT '+8801875354842',
@@ -69,7 +59,6 @@ CREATE TABLE IF NOT EXISTS public.assets (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- FIX: Ensure stock_limit and units_sold exist if table already exists
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS stock_limit INTEGER DEFAULT 100;
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS units_sold INTEGER DEFAULT 0;
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS lifecycle_days INTEGER DEFAULT 30;
@@ -86,7 +75,7 @@ CREATE TABLE IF NOT EXISTS public.user_investments (
   amount FLOAT NOT NULL,
   hourly_return FLOAT NOT NULL,
   start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  expiry_date TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + interval '30 days'),
+  expiry_date TIMESTAMP WITH TIME ZONE,
   last_calculated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   status TEXT DEFAULT 'active'
 );
@@ -94,6 +83,7 @@ CREATE TABLE IF NOT EXISTS public.user_investments (
 ALTER TABLE public.user_investments ADD COLUMN IF NOT EXISTS asset_id UUID REFERENCES public.assets(id);
 ALTER TABLE public.user_investments ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'worker';
 ALTER TABLE public.user_investments ADD COLUMN IF NOT EXISTS hourly_return FLOAT DEFAULT 0;
+ALTER TABLE public.user_investments ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP WITH TIME ZONE;
 
 -- Newsfeed Table
 CREATE TABLE IF NOT EXISTS public.newsfeed (
@@ -131,10 +121,6 @@ CREATE TABLE IF NOT EXISTS public.withdrawals (
   status TEXT DEFAULT 'pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
-ALTER TABLE public.withdrawals ADD COLUMN IF NOT EXISTS amount_coins FLOAT DEFAULT 0;
-ALTER TABLE public.withdrawals ADD COLUMN IF NOT EXISTS amount_bdt FLOAT DEFAULT 0;
-ALTER TABLE public.withdrawals ADD COLUMN IF NOT EXISTS number TEXT;
 
 -- 3. AUTOMATION & SECURITY (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -189,6 +175,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_user_sync();
@@ -238,7 +225,7 @@ BEGIN
     hours_diff := EXTRACT(EPOCH FROM (current_time - profile_rec.last_collect)) / 3600;
     
     IF inv_rec.type = 'worker' THEN
-      -- WORKER LOGIC: Requires daily engagement
+      -- WORKER LOGIC: Requires daily engagement (24h Window)
       IF hours_diff <= safe_hours THEN
         total_user_profit := total_user_profit + (hours_diff * inv_rec.hourly_return);
       ELSE
@@ -246,7 +233,7 @@ BEGIN
         total_admin_penalty := total_admin_penalty + ((hours_diff - safe_hours) * inv_rec.hourly_return);
       END IF;
     ELSE
-      -- INVESTOR LOGIC: Linear yield, no 24h penalty
+      -- INVESTOR LOGIC: Passive Monthly Linear yield (No engagement penalty)
       DECLARE
         asset_profit FLOAT;
       BEGIN
@@ -256,7 +243,7 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- 4. Apply Badge Multipliers
+  -- 4. Apply Badge Multipliers (Loyalty Rewards)
   IF profile_rec.badge IN ('Gold', 'Platinum') THEN
     total_user_profit := total_user_profit * 1.005; -- 0.5% Loyalty Bonus
   END IF;
@@ -267,15 +254,18 @@ BEGIN
       last_collect = current_time
   WHERE id = target_user_id;
 
-  -- 6. Diversion to Reserves
+  -- 6. Diversion to Reserves (Missed worker collections)
   IF total_admin_penalty > 0 AND admin_id IS NOT NULL THEN
     UPDATE public.profiles SET balance = balance + total_admin_penalty WHERE id = admin_id;
   END IF;
 
-  -- 7. CLEANUP EXPIRED ASSETS
+  -- 7. CLEANUP EXPIRED ASSETS (Lifecycle Termination)
   UPDATE public.user_investments 
   SET status = 'expired' 
-  WHERE user_id = target_user_id AND expiry_date <= current_time;
+  WHERE user_id = target_user_id AND (
+    expiry_date <= current_time 
+    OR (SELECT lifecycle_days * interval '1 day' FROM public.assets WHERE id = asset_id) + start_date <= current_time
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -301,12 +291,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- CLEANUP ASSETS
+-- 7. INITIAL ASSET SEEDING (LitePremium Official Models)
 DELETE FROM public.assets;
 
--- INSERT WORKER ASSETS (5% Monthly Fixed Profit Logic - LitePremium Official)
--- Note: 'rate' is Coins/Hour. 720 hours = 30 days.
--- Price * 0.05 / 720 = Hourly Rate
+-- WORKER MODELS (5% Monthly Return Logic)
 INSERT INTO public.assets (name, type, price, rate, icon, stock_limit, lifecycle_days) VALUES 
 ('Rickshaw', 'worker', 7200, 0.50, 'HardHat', 1000, 30),
 ('Electric Bike', 'worker', 10000, 0.69, 'Zap', 1000, 30),
@@ -319,12 +307,12 @@ INSERT INTO public.assets (name, type, price, rate, icon, stock_limit, lifecycle
 ('Excavator', 'worker', 250000, 17.36, 'Hammer', 1000, 30),
 ('Tractor', 'worker', 400000, 27.77, 'Tractor', 1000, 30);
 
--- INSERT INVESTOR ASSETS (Scarcity: 100 units each)
--- 'profit_tier_coins' is the MONTHLY profit.
+-- INVESTOR MODELS (Fixed Strategy)
 INSERT INTO public.assets (name, type, price, profit_tier_coins, icon, stock_limit, lifecycle_days) VALUES 
-('Small Shop', 'investor', 7200, 72, 'Store', 100, 30),  -- 1% of 7200
-('Mini Mart', 'investor', 14200, 284, 'ShoppingCart', 100, 30), -- 2% of 14200
-('Pharmacy', 'investor', 7200, 144, 'PlusSquare', 100, 60); -- 2% of 7200, 2 Months Lifecycle
+('Small Shop', 'investor', 7200, 72, 'Store', 100, 30),
+('Mini Mart', 'investor', 14200, 284, 'ShoppingCart', 100, 30),
+('Pharmacy', 'investor', 7200, 144, 'PlusSquare', 100, 60);
 
-INSERT INTO public.newsfeed (message) VALUES ('System Protocol: All assets carry a 24h collection cycle. Late harvests are diverted to reserves.')
+-- INITIAL SYSTEM BROADCAST
+INSERT INTO public.newsfeed (message) VALUES ('LitePremium Protocol: Operational. All assets carry a strictly monitored 24h collection cycle.')
 ON CONFLICT DO NOTHING;
