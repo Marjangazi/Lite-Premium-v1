@@ -54,4 +54,3 @@ jobs:
           projectName: "lite-digi-v1"
           directory: dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          skipUpload: false
